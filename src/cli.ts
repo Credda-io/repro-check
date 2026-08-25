@@ -49,7 +49,7 @@ Options
 Exit codes
   0  no gaps of the relevant severity were found
   1  gaps were found
-  2  the input could not be read
+  2  the input could not be read, or the command line was wrong
 
 repro-check is a heuristic linter. It reports gaps it found. It cannot tell you
 a report is reproducible -- only that it found none of the things it looks for.`;

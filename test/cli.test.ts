@@ -128,3 +128,25 @@ test('no rendering ever calls a report reproducible', () => {
     }
   }
 });
+
+/**
+ * The README quotes an issue body and the output it produces. A worked example
+ * that no longer works is worse than none, because a reader takes it for a
+ * description of the tool. So the README is read here and compared, rather than
+ * trusted to whoever last changed a message.
+ */
+test("the README's worked example is the output the tool actually produces", () => {
+  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  const marker = '$ repro-check test/fixtures/readme-example.md\n';
+  const start = readme.indexOf(marker);
+  assert.notEqual(start, -1, 'the README no longer contains the worked example');
+  const quoted = readme.slice(start + marker.length, readme.indexOf('\n```', start + marker.length));
+
+  const body = readFileSync(fixturePath('readme-example'), 'utf8');
+  const actual = formatText(checkIssue(body), {
+    name: 'test/fixtures/readme-example.md',
+    color: false,
+  });
+
+  assert.equal(actual.trimEnd(), quoted.trimEnd());
+});

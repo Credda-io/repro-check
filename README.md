@@ -61,13 +61,22 @@ Node 20.6 or newer.
 
 ```console
 repro-check issue.md                 # a file
+repro-check one.md two.md three.md   # several; the worst exit code wins
 gh issue view 123 --json body -q .body | repro-check -   # stdin
 repro-check https://github.com/owner/repo/issues/123     # via the gh CLI
 repro-check --json issue.md          # machine-readable
 repro-check --format markdown issue.md   # a comment body to post
 repro-check --format github issue.md     # GitHub Actions annotations
+repro-check --strict issue.md        # advisory gaps fail too
+repro-check --skip no-version,no-environment issue.md    # drop categories
+repro-check --no-color issue.md      # no ANSI escapes
 repro-check --explain                # what every category means
+repro-check --version                # the version, and nothing else
 ```
+
+The GitHub URL form shells out to the `gh` CLI. `repro-check` never opens a
+socket itself, and a URL that is not a GitHub issue is refused rather than
+fetched.
 
 ### Exit codes
 
@@ -75,7 +84,16 @@ repro-check --explain                # what every category means
 | --- | --- |
 | `0` | No gaps of the relevant severity were found |
 | `1` | Gaps were found |
-| `2` | The input could not be read |
+| `2` | The input could not be read, or the command line was wrong |
+
+Exit 2 covers both halves: a file that does not exist, a URL that is not a
+GitHub issue, `gh` not being installed, and also an unknown flag, an unknown
+`--format` or an unknown `--skip` category. An unrecognised category is an error
+rather than a silent no-op, because a typo in a `--skip` list would otherwise
+quietly turn a check back on.
+
+With several inputs the process exits on the worst result any one of them
+produced.
 
 By default only **blocking** gaps fail the run. `--strict` makes advisory gaps
 fail too. `--skip <a,b>` turns off categories that are noise for your project —
@@ -134,20 +152,45 @@ needs — steps, version, environment, expected, actual — and advisory otherwi
 An empty "Additional context" is worth mentioning; it is not worth failing a
 build over.
 
-The one worth pointing at is `unresolved-reference`:
+The one worth pointing at is `unresolved-reference`. Given this whole issue
+body, which is [`test/fixtures/readme-example.md`](test/fixtures/readme-example.md):
+
+````markdown
+**Expected:** `settings.locale` is `en-GB`, the value in the config file.
+
+**Actual:** it is `undefined`. repro-check 0.1.0, Node 20.11, Ubuntu 22.04.
+
+```js
+import { readFileSync } from 'node:fs';
+const load = (p) => readFileSync(p, 'utf8');
+const settings = parseConfig(load('./app.conf'));
+console.log(settings.locale);
+```
+````
 
 ```console
-$ repro-check issue.md
-issue.md: 1 gap found -- 1 blocking, 0 advisory
+$ repro-check test/fixtures/readme-example.md
+test/fixtures/readme-example.md: 1 gap found -- 1 blocking, 0 advisory
 
 BLOCKING
-  unresolved-reference (line 10)
+  unresolved-reference (line 8)
     The snippet uses `parseConfig`, which nothing in it defines, imports
     or receives as an argument.
       const settings = parseConfig(load('./app.conf'));
+
+  repro-check is a heuristic linter. It reports gaps it found; it cannot tell
+  you a report is reproducible, only that it found none of the things it knows
+  to look for.
 ```
 
-That snippet looks complete. It cannot run.
+That block is asserted against the real output in
+[`test/cli.test.ts`](test/cli.test.ts), so this README cannot drift away from
+what the code does.
+
+The snippet looks complete. It cannot run. Every other gap the report could
+have had, it does not: it names a version, a runtime and an operating system,
+it says what it expected and what it got, and the code block closes. That is
+what one remaining gap looks like.
 
 ## Limits, stated plainly
 
