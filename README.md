@@ -226,12 +226,25 @@ right, so those are absent rather than approximated.
 
 ## How it behaves on real reports
 
-Run over 1,583 open issue bodies from 38 popular JavaScript repositories, it
-found at least one gap in 92% of them, and no blocking gap in 20%. The most
-common gaps were a missing environment (48% of reports), a missing version
-(47%), and no failure evidence at all (35%). It found a snippet using a name
-nothing defines in 19%, and a snippet reading a file the report never shows in
-1%.
+Run over **1,631 open issue bodies from 40 JavaScript repositories**, it found
+at least one gap in 92% of them, and no blocking gap in 19%. The most common
+gaps were a missing environment (49% of reports), a missing version (48%), no
+failure evidence at all (36%), an unfilled issue template (28%) and no
+reproduction steps (26%). It found a snippet using a name nothing defines in
+19%, and a snippet reading a file the report never shows in 1%.
+
+**Re-derive it rather than trusting it.** The corpus is the issue cache in
+[codereefai/bench](https://github.com/codereefai/bench), fetched verbatim from
+the GitHub API, and the script is in this repository:
+
+```console
+node scripts/measure-corpus.mjs ../bench/harvest/cache
+```
+
+Pull requests and empty bodies are dropped; every remaining body is one
+reporter's own text, unedited. A category is counted once per report rather
+than once per gap, so a report naming three unresolved references counts once.
+These figures came out of that command, and they move when the corpus does.
 
 That is a measurement of this tool's rules against that corpus, not a claim
 about how many of those issues are truly irreproducible. Some gaps it reports
