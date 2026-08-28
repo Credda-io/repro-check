@@ -266,5 +266,5 @@ Apache-2.0.
 
 ---
 
-Built alongside [CodeReef](https://codereef.app), which works on the other half
+Built alongside [Credda](https://codereef.app), which works on the other half
 of the problem: reproducing the reports that do contain enough.
