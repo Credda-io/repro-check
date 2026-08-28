@@ -1,0 +1,10 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a vulnerability privately
+    url: https://github.com/Credda-io/repro-check/security/advisories/new
+    about: Do not open a public issue for something exploitable. See SECURITY.md.
+  - name: What Credda is
+    url: https://credda.io
+    about: >
+      This package finds what a bug report is missing. Credda works on the other
+      half — reproducing the reports that do contain enough, and fixing them.

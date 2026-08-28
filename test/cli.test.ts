@@ -11,7 +11,13 @@ const BIN = fileURLToPath(new URL('../src/bin.ts', import.meta.url));
 const fixturePath = (name: string): string => fileURLToPath(new URL(`./fixtures/${name}.md`, import.meta.url));
 
 function run(args: readonly string[], input?: string): { code: number; out: string; err: string } {
-  const result = spawnSync(process.execPath, [BIN, ...args], {
+  // `process.execArgv` is forwarded because the CLI is spawned as TypeScript.
+  // A Node old enough to need `--experimental-strip-types` to load this test
+  // file needs it to load `bin.ts` too, and a child does not inherit it. Without
+  // this, every test in this file fails with ERR_UNKNOWN_FILE_EXTENSION on Node
+  // 22.6 to 22.17 while the rest of the suite passes -- which reads like twelve
+  // CLI bugs rather than one missing flag.
+  const result = spawnSync(process.execPath, [...process.execArgv, BIN, ...args], {
     encoding: 'utf8',
     input: input ?? '',
   });
@@ -104,6 +110,16 @@ test('arguments are parsed into the documented shape', () => {
 
 test('an unknown skip category is a usage error, not a silent no-op', () => {
   assert.throws(() => parseArgs(['--skip', 'made-up']), /unknown category/);
+});
+
+test('a --skip that names nothing is a usage error too', () => {
+  // The same mistake as a typo'd category, written three other ways. Each of
+  // these used to turn off no checks and say nothing about it, which is exactly
+  // the silence the unknown-category error exists to prevent.
+  assert.throws(() => parseArgs(['--skip']), /needs at least one category/);
+  assert.throws(() => parseArgs(['--skip=']), /needs at least one category/);
+  assert.throws(() => parseArgs(['--skip', ' , ,']), /needs at least one category/);
+  assert.equal(run(['--skip', '--no-color', 'x.md']).code, 2);
 });
 
 test('every format carries the disclaimer, or in the case of annotations, no verdict', () => {

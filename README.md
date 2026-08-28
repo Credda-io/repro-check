@@ -1,5 +1,11 @@
 # repro-check
 
+[![Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-informational)](LICENSE)
+[![npm](https://img.shields.io/npm/v/repro-check)](https://www.npmjs.com/package/repro-check)
+[![zero dependencies](https://img.shields.io/badge/dependencies-none-informational)](package.json)
+
+**Does this bug report contain enough to reproduce it?**
+
 Most bug reports cannot be reproduced from what they contain. The snippet calls
 a function it never defines, the version is missing, the reporter says what
 *should* have happened and never says what *did*. A maintainer finds this out
@@ -34,6 +40,40 @@ ADVISORY
 
 Zero dependencies. No account, no network, no model. It reads text and applies
 rules.
+
+## Why it is a package of its own
+
+Because it belongs at the moment a report is filed, and nothing that lives at
+that moment is allowed to be heavy. A tool that runs on every opened issue in a
+public repository is running on unauthenticated input, from a GitHub Action, on
+somebody else's minutes -- so it has no dependencies to audit, opens no socket,
+calls no model, and finishes in milliseconds. Those constraints are the product;
+they are not compatible with being a feature of something larger.
+
+It is also the half of the problem that can be solved by rules. Deciding whether
+a report is *sufficient* takes judgement about meaning. Deciding whether it
+contains a version number, closes its code blocks, and defines the function its
+snippet calls does not, and a maintainer should not be finding those out by hand
+three days later.
+
+## What it has to do with Credda
+
+[Credda](https://credda.io) finds the security risks and the bugs in a company's
+production and QA environments and opens the pull request that fixes them: it
+runs in your own CI, reproduces the reported failure, finds what actually caused
+it, writes the patch, and proves it with a test that fails before and passes
+after. A person reviews the diff; Credda never merges.
+
+`repro-check` works on the report that arrives before any of that can start. A
+report with no version, no observed value and a snippet that calls an undefined
+function cannot be reproduced by a person or by anything else, and the honest
+response is to say what is missing rather than to spend a sandbox finding out.
+This package is that response, extracted so it is useful on its own to
+maintainers who will never run Credda at all.
+
+Contributions: [CONTRIBUTING.md](CONTRIBUTING.md). Vulnerabilities:
+[SECURITY.md](SECURITY.md), privately -- it reads public, attacker-chosen text
+in a CI job, and that is worth being precise about.
 
 ## The one thing to understand first
 
@@ -233,18 +273,20 @@ failure evidence at all (36%), an unfilled issue template (28%) and no
 reproduction steps (26%). It found a snippet using a name nothing defines in
 19%, and a snippet reading a file the report never shows in 1%.
 
-**Re-derive it rather than trusting it.** The corpus is the issue cache in
-[codereefai/bench](https://github.com/codereefai/bench), fetched verbatim from
-the GitHub API, and the script is in this repository:
+**Re-derive it rather than trusting it.** The script that produced those figures
+ships in this repository, and it takes a directory of GitHub issue-API pages:
 
 ```console
-node scripts/measure-corpus.mjs ../bench/harvest/cache
+node scripts/measure-corpus.mjs <path-to-cache-dir>
 ```
 
-Pull requests and empty bodies are dropped; every remaining body is one
-reporter's own text, unedited. A category is counted once per report rather
-than once per gap, so a report naming three unresolved references counts once.
-These figures came out of that command, and they move when the corpus does.
+The harvest these numbers came from is not public, so build your own -- the
+script's docblock has the one `gh api` call that writes a page, and any corpus in
+that shape works. Pull requests and empty bodies are dropped; every remaining
+body is one reporter's own text, unedited. A category is counted once per report
+rather than once per gap, so a report naming three unresolved references counts
+once. These figures came out of that command against that corpus, and they move
+when the corpus does.
 
 That is a measurement of this tool's rules against that corpus, not a claim
 about how many of those issues are truly irreproducible. Some gaps it reports
@@ -260,11 +302,18 @@ npm test
 npm run build
 ```
 
+`npm test` is Node's own runner over the TypeScript sources with no build step,
+so it needs a Node with type stripping on by default -- **22.18 or newer, or 24
+and up**. On Node 22.6 to 22.17 every file fails to load with
+`ERR_UNKNOWN_FILE_EXTENSION`; run
+`node --experimental-strip-types --test "test/**/*.test.ts"` instead.
+`engines` deliberately still says `>=20.6.0`, because that is what the
+*published* package needs: consumers install compiled JavaScript and have no
+TypeScript to strip.
+
+[CONTRIBUTING.md](CONTRIBUTING.md) has the three rules that are not negotiable
+and what a proposed eleventh category has to clear.
+
 ## Licence
 
 Apache-2.0.
-
----
-
-Built alongside [Credda](https://codereef.app), which works on the other half
-of the problem: reproducing the reports that do contain enough.

@@ -79,7 +79,19 @@ export function parseArgs(argv: readonly string[]): Options {
       format = value as Format;
     } else if (arg === '--skip' || arg.startsWith('--skip=')) {
       const value = arg.startsWith('--skip=') ? arg.slice('--skip='.length) : argv[++at];
-      for (const name of (value ?? '').split(',').map((part) => part.trim()).filter(Boolean)) {
+      // A `--skip` that turned off nothing would be the silent no-op this flag
+      // is otherwise careful to avoid. An unrecognised category is an error
+      // because a typo would quietly turn a check back on; `--skip` with nothing
+      // after it, `--skip=`, and `--skip ,,` are the same mistake written three
+      // other ways, and used to pass.
+      const names = (value ?? '')
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean);
+      if (names.length === 0) {
+        throw new UsageError("--skip needs at least one category; --explain lists them");
+      }
+      for (const name of names) {
         if (!ALL_CATEGORIES.includes(name as GapCategory)) throw new UsageError(`unknown category '${name}'`);
         skip.push(name as GapCategory);
       }

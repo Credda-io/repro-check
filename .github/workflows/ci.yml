@@ -1,0 +1,56 @@
+# Typecheck, test, build.
+#
+# `npm test` is Node's own runner over the TypeScript sources with no build
+# step, which needs type stripping on by default -- Node 22.18 or newer, or 24
+# and up. That is why the matrix starts at 22 rather than at the 20.6 in
+# `engines`: 20.6 is what the *published* package needs, since consumers install
+# compiled JavaScript from dist/ and have no TypeScript to strip.
+#
+# The `build-runs-on-node-20` job below is the check that keeps those two
+# numbers honest.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22.18', '24']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  build-runs-on-node-20:
+    # `engines` promises Node 20.6. Nothing else in this workflow would notice
+    # if the compiled output stopped running there.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: the CLI runs on the oldest Node engines claims
+        run: |
+          node dist/bin.js --version
+          node dist/bin.js --explain > /dev/null
+          node dist/bin.js --no-color test/fixtures/clean.md

@@ -11,6 +11,15 @@
     "maintainer"
   ],
   "license": "Apache-2.0",
+  "homepage": "https://github.com/Credda-io/repro-check#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Credda-io/repro-check.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Credda-io/repro-check/issues"
+  },
+  "author": "Credda (https://credda.io)",
   "type": "module",
   "engines": {
     "node": ">=20.6.0"

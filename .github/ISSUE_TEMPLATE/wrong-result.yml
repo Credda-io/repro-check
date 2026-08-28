@@ -1,0 +1,53 @@
+name: It reported a gap that is not there, or missed one that is
+description: A false positive or a false negative on a real report body.
+labels: [accuracy]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A linter for bug reports should be able to take one.
+
+        Before filing a false positive, check the README's "Limits, stated
+        plainly" — a pasted fragment of somebody's own source genuinely does not
+        define what it uses, and `repro-check` says so. That is accurate and
+        sometimes unhelpful, and `--skip unresolved-reference` is the answer.
+  - type: dropdown
+    id: direction
+    attributes:
+      label: Which way was it wrong?
+      options:
+        - It reported a gap that is not actually missing (false positive)
+        - It missed a gap that is missing (false negative)
+        - The gap was right, the severity was wrong
+    validations:
+      required: true
+  - type: textarea
+    id: body
+    attributes:
+      label: The report body it was run on
+      description: >
+        The whole thing, as Markdown, including the fenced blocks. The smallest
+        version that still shows it is best, but a real one is better than a
+        made-up one.
+      render: markdown
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: What repro-check printed
+      description: Run with `--no-color`.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: category
+    attributes:
+      label: Which category
+      description: e.g. `unresolved-reference`. `--explain` lists them all.
+  - type: input
+    id: version
+    attributes:
+      label: repro-check version and Node version
+    validations:
+      required: true

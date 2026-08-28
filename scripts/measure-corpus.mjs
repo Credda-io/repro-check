@@ -14,14 +14,22 @@
  *
  * ## THE CORPUS
  *
- * `github.com/codereefai/bench`, a public repository, holds a harvest of real
- * open issues fetched verbatim from the GitHub API under
- * `harvest/cache/<owner>__<repo>--p<N>.json`. Each file is one page of the
- * issues API as it answered, so the bodies are the reporters' own text and
- * nothing here has edited them.
+ * A directory of JSON files, each one a page of GitHub's issues API exactly as
+ * it answered -- so the bodies are the reporters' own text and nothing here has
+ * edited them. Any directory in that shape works; the figures in the README came
+ * from a harvest that is no longer public, which is precisely why this takes a
+ * path rather than shipping one.
+ *
+ * To build your own, one page per call:
+ *
+ *   gh api '/repos/<owner>/<repo>/issues?state=open&per_page=100&page=1' \
+ *     > cache/<owner>__<repo>--p1.json
+ *
+ * A file may be the bare array the API returns, or an object with that array in
+ * a `body` field (as an HTTP cache writes it). Both are read.
  *
  * Usage:
- *   node scripts/measure-corpus.mjs <path-to-bench/harvest/cache>
+ *   node scripts/measure-corpus.mjs <path-to-cache-dir>
  *
  * The numbers move when the corpus does. Re-run it rather than editing the
  * README's figures by hand.
@@ -32,7 +40,7 @@ import { checkIssue } from '../dist/index.js';
 
 const cacheDir = process.argv[2];
 if (cacheDir === undefined) {
-  console.error('usage: node scripts/measure-corpus.mjs <path-to-bench/harvest/cache>');
+  console.error('usage: node scripts/measure-corpus.mjs <path-to-cache-dir>');
   process.exit(2);
 }
 
