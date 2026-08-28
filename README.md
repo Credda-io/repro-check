@@ -1,7 +1,6 @@
 # repro-check
 
 [![Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-informational)](LICENSE)
-[![npm](https://img.shields.io/npm/v/repro-check)](https://www.npmjs.com/package/repro-check)
 [![zero dependencies](https://img.shields.io/badge/dependencies-none-informational)](package.json)
 
 **Does this bug report contain enough to reproduce it?**
@@ -58,11 +57,11 @@ three days later.
 
 ## What it has to do with Credda
 
-[Credda](https://credda.io) finds the security risks and the bugs in a company's
-production and QA environments and opens the pull request that fixes them: it
-runs in your own CI, reproduces the reported failure, finds what actually caused
-it, writes the patch, and proves it with a test that fails before and passes
-after. A person reviews the diff; Credda never merges.
+[Credda](https://credda.io) finds the bugs and security vulnerabilities in a
+company's production and QA environments, reproduces the failure, diagnoses the
+cause, writes the patch, proves it with a test that fails before and passes
+after, and opens a pull request. It runs in your own CI. It proposes and never
+merges.
 
 `repro-check` works on the report that arrives before any of that can start. A
 report with no version, no observed value and a snippet that calls an undefined
@@ -96,6 +95,17 @@ npm install --save-dev repro-check   # or: npx repro-check <file>
 ```
 
 Node 20.6 or newer.
+
+> **Not on npm yet — checked 2026-08-28.** `https://registry.npmjs.org/repro-check`
+> returns 404, so neither command above resolves today, and the `npx` invocations
+> shown elsewhere in this README are illustrations of the finished interface
+> rather than commands you can run. Until `0.1.0` is published, use it from a
+> checkout: `npm install && npm run build && node dist/bin.js issue.md`.
+>
+> Running the test suite from source needs Node **22.18 or newer** (or 24) — it
+> runs Node's own test runner straight over the TypeScript with no build step,
+> which needs type stripping on by default. The `20.6` above is what the
+> *published* package needs, since that ships compiled JavaScript.
 
 ## Use
 
