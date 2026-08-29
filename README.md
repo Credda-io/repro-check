@@ -57,11 +57,11 @@ three days later.
 
 ## What it has to do with Credda
 
-[Credda](https://credda.io) finds the bugs and security vulnerabilities in a
-company's production and QA environments, reproduces the failure, diagnoses the
-cause, writes the patch, proves it with a test that fails before and passes
-after, and opens a pull request. It runs in your own CI. It proposes and never
-merges.
+[Credda](https://credda.io) takes a bug report or security vulnerability a
+customer has labelled, reproduces the failure, diagnoses the cause, writes the
+patch, proves it with a test that fails before and passes after, and hands back
+a diff. It runs in your own CI. Delivering that diff as a pull request is opt-in
+and off by default. It proposes and never merges.
 
 `repro-check` works on the report that arrives before any of that can start. A
 report with no version, no observed value and a snippet that calls an undefined
