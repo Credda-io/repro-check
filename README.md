@@ -65,7 +65,10 @@ pull request depends on which mechanism delivered it, and the two answer
 differently: the **GitHub App** path opens one with no flag and no switch, for a
 run that reaches `READY_FOR_REVIEW` with a proven verdict; the **GitHub Action**
 opens none unless you set its `open-pull-request` input, which defaults to
-`false`. How often a run reaches a proven fix at all has not been measured. It
+`false`, **and** add `contents: write` and `pull-requests: write` to your own
+workflow's `permissions:` block, which a default install does not grant. Turning
+the input on without both scopes fails at that step rather than opening
+anything. How often a run reaches a proven fix at all has not been measured. It
 proposes and never merges.
 
 `repro-check` works on the report that arrives before any of that can start. A
