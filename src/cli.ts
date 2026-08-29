@@ -49,7 +49,7 @@ Options
 Exit codes
   0  no gaps of the relevant severity were found
   1  gaps were found
-  2  the input could not be read, or the command line was wrong
+  2  the input was empty or could not be read, or the command line was wrong
 
 repro-check is a heuristic linter. It reports gaps it found. It cannot tell you
 a report is reproducible -- only that it found none of the things it looks for.`;
@@ -110,7 +110,24 @@ class UsageError extends Error {}
 export function readInput(input: string): { name: string; body: string } {
   if (input === '-') return { name: 'stdin', body: readFileSync(0, 'utf8') };
   if (/^https?:\/\//i.test(input)) return { name: input, body: fetchWithGh(input) };
-  return { name: input, body: readFileSync(input, 'utf8') };
+  try {
+    return { name: input, body: readFileSync(input, 'utf8') };
+  } catch (error) {
+    /*
+     * The bare errno string ("ENOENT: no such file or directory, open 'x.md'")
+     * names the syscall and leaves the reader to work out what this tool wanted
+     * instead. The three input shapes are the useful thing to say here, because
+     * the usual cause is a path that was meant to be a GitHub URL or a pipe.
+     */
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT') {
+      throw new UsageError(`no such file: '${input}'. Pass a path to an issue body, a GitHub issue URL, or '-' to read it from stdin`);
+    }
+    if (code === 'EISDIR') {
+      throw new UsageError(`'${input}' is a directory; pass a file containing one issue body`);
+    }
+    throw new UsageError(`could not read '${input}': ${(error as Error).message}`);
+  }
 }
 
 /**
@@ -160,6 +177,20 @@ export function main(argv: readonly string[]): number {
     return 0;
   }
 
+  /*
+   * No inputs means stdin, but only when something is actually piped in.
+   *
+   * `repro-check` with no arguments used to read fd 0 unconditionally. On a
+   * terminal that hangs with no prompt; with stdin closed it read zero bytes
+   * and then reported the empty string as four gaps -- "no reproduction steps",
+   * "no version", "no failure evidence" -- which is a confident verdict about a
+   * document the user never supplied. Naming the mistake is the whole fix.
+   */
+  if (options.inputs.length === 0 && process.stdin.isTTY === true) {
+    process.stderr.write(`repro-check: no input given. Pass a file, or '-' to read the report from stdin.\n\n${USAGE}\n`);
+    return 2;
+  }
+
   const inputs = options.inputs.length > 0 ? options.inputs : ['-'];
   let worst = 0;
   const rendered: string[] = [];
@@ -170,6 +201,18 @@ export function main(argv: readonly string[]): number {
       read = readInput(input);
     } catch (error) {
       process.stderr.write(`repro-check: ${(error as Error).message}\n`);
+      return 2;
+    }
+    /*
+     * An empty document is not a report with gaps in it; it is the absence of a
+     * report. Every gap this tool looks for is defined by something not being
+     * present, so a zero-byte input satisfies all of them at once and renders
+     * as the worst report ever filed. That output looked like an answer, so a
+     * mistyped path, a `gh` call that returned nothing, or a truncated pipe all
+     * arrived dressed as a verdict about someone's issue.
+     */
+    if (read.body.trim().length === 0) {
+      process.stderr.write(`repro-check: ${read.name} is empty -- there is nothing to check.\n`);
       return 2;
     }
     const result = checkIssue(read.body, { skip: options.skip });

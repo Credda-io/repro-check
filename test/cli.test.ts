@@ -48,6 +48,33 @@ test('a body can be piped in on stdin', () => {
   assert.match(result.out, /no-reproduction-steps/);
 });
 
+/*
+ * The three tests below cover inputs that carry no report. Each of them used to
+ * render as a four-gap verdict -- the empty string is missing everything this
+ * linter looks for -- so a mistyped path or a pipe that produced nothing came
+ * back looking like a judgement about somebody's issue.
+ */
+test('an empty file is named as empty rather than reported as four gaps', () => {
+  const result = run(['--no-color', fixturePath('empty')]);
+  assert.equal(result.code, 2);
+  assert.match(result.err, /is empty -- there is nothing to check/);
+  assert.doesNotMatch(result.out, /no-reproduction-steps/);
+});
+
+test('an empty stdin is named as empty too', () => {
+  const result = run(['--no-color', '-'], '   \n');
+  assert.equal(result.code, 2);
+  assert.match(result.err, /stdin is empty/);
+});
+
+test('a path that does not exist says what the three input shapes are', () => {
+  const result = run(['--no-color', fixturePath('no-such-fixture')]);
+  assert.equal(result.code, 2);
+  assert.match(result.err, /no such file/);
+  assert.match(result.err, /GitHub issue URL/);
+  assert.doesNotMatch(result.err, /ENOENT/);
+});
+
 test('several inputs are all reported and the worst exit code wins', () => {
   const result = run(['--no-color', fixturePath('clean'), fixturePath('unresolved')]);
   assert.equal(result.code, 1);

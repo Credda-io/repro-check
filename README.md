@@ -60,8 +60,13 @@ three days later.
 [Credda](https://credda.io) takes a bug report or security vulnerability a
 customer has labelled, reproduces the failure, diagnoses the cause, writes the
 patch, proves it with a test that fails before and passes after, and hands back
-a diff. It runs in your own CI. Delivering that diff as a pull request is opt-in
-and off by default. It proposes and never merges.
+a diff. It runs in your own CI. Whether that diff becomes a
+pull request depends on which mechanism delivered it, and the two answer
+differently: the **GitHub App** path opens one with no flag and no switch, for a
+run that reaches `READY_FOR_REVIEW` with a proven verdict; the **GitHub Action**
+opens none unless you set its `open-pull-request` input, which defaults to
+`false`. How often a run reaches a proven fix at all has not been measured. It
+proposes and never merges.
 
 `repro-check` works on the report that arrives before any of that can start. A
 report with no version, no observed value and a snippet that calls an undefined
@@ -134,11 +139,19 @@ fetched.
 | --- | --- |
 | `0` | No gaps of the relevant severity were found |
 | `1` | Gaps were found |
-| `2` | The input could not be read, or the command line was wrong |
+| `2` | The input was empty or could not be read, or the command line was wrong |
 
-Exit 2 covers both halves: a file that does not exist, a URL that is not a
-GitHub issue, `gh` not being installed, and also an unknown flag, an unknown
-`--format` or an unknown `--skip` category. An unrecognised category is an error
+Exit 2 covers both halves: a file that does not exist, a file that is empty, a
+URL that is not a GitHub issue, `gh` not being installed, and also an unknown
+flag, an unknown `--format` or an unknown `--skip` category.
+
+An **empty** input exits 2 rather than reporting gaps. Every gap this tool looks
+for is the absence of something, so a zero-byte document satisfies all of them
+at once and used to render as the worst report ever filed — which meant a
+mistyped path or a `gh` call that returned nothing came back looking like a
+verdict about somebody's issue. Running `repro-check` with no arguments at a
+terminal now prints the usage instead of waiting on stdin for input nobody is
+going to type; piping still works, with or without the explicit `-`. An unrecognised category is an error
 rather than a silent no-op, because a typo in a `--skip` list would otherwise
 quietly turn a check back on.
 
