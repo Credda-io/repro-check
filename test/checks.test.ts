@@ -233,3 +233,29 @@ test('an empty body does not throw and reports gaps rather than a pass', () => {
   assert.equal(result.verdict, 'gaps-found');
   assert.ok(result.counts.blocking > 0);
 });
+
+test('no-reproduction-steps: a backticked call is code, even with no fence anywhere', () => {
+  const body = "`pluralize('passerby')` gives 'passerbies'. Expected 'passersby'. pluralize 8.0.0 on Node 20.\n";
+  const found = checkIssue(body).gaps.map((gap) => gap.category);
+  assert.ok(!found.includes('no-reproduction-steps'));
+});
+
+test('no-reproduction-steps: backticked prose that is not a call is still no code', () => {
+  for (const span of ['`index.js`', '`--no-color`', '`Array.prototype`', '`pluralize(word, count)`']) {
+    const found = checkIssue(`It breaks in ${span}, somehow.\n`).gaps.map((gap) => gap.category);
+    assert.ok(found.includes('no-reproduction-steps'), span);
+  }
+});
+
+test('an inline call is a call: balanced, whole, and argued with a value', () => {
+  const runnable = ['`moment()`', "`_.get(o, 'a.b')`", '`new Foo(1)`', "`math.evaluate('1+1').toString()`"];
+  for (const span of runnable) {
+    const found = checkIssue(`Try ${span} and see.\n`).gaps.map((gap) => gap.category);
+    assert.ok(!found.includes('no-reproduction-steps'), span);
+  }
+  const notRunnable = ['`foo(`', '`foo(1)) `', '`x = foo(1)`', '`foo(1) === 2`'];
+  for (const span of notRunnable) {
+    const found = checkIssue(`Try ${span} and see.\n`).gaps.map((gap) => gap.category);
+    assert.ok(found.includes('no-reproduction-steps'), span);
+  }
+});

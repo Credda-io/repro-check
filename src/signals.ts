@@ -108,6 +108,8 @@ export interface Signals {
   readonly commands: readonly Evidence[];
   readonly numberedSteps: readonly Evidence[];
   readonly reproLinks: readonly Evidence[];
+  /** Backticked spans that are a call the reporter could have run. */
+  readonly inlineExpressions: readonly Evidence[];
   readonly version: Evidence | null;
   readonly environment: Evidence | null;
   readonly expected: Evidence | null;
@@ -130,6 +132,7 @@ export function readSignals(report: ParsedReport): Signals {
     commands: matchesIn(report, COMMAND_LINE, { includeCode: true }),
     numberedSteps: matchesIn(report, NUMBERED_STEP, { includeCode: false }),
     reproLinks: matchesIn(report, REPRO_LINK, { includeCode: false }),
+    inlineExpressions: inlineExpressions(report),
     version: firstOf(report, VERSION_PATTERNS, { includeCode: true }),
     environment: firstOf(report, [ENVIRONMENT_PATTERN], { includeCode: 'annotated' }),
     expected: expectedEvidence(report),
@@ -137,6 +140,71 @@ export function readSignals(report: ParsedReport): Signals {
     errors: firstOf(report, ERROR_PATTERNS, { includeCode: true }),
     emptySections: report.sections.filter((section) => isEffectivelyEmpty(section.body)),
   };
+}
+
+/**
+ * A leading `new`, then an identifier or a member chain, then a call.
+ *
+ * Anchored at both ends: the whole span has to be the expression. `foo.js`,
+ * `--flag` and `Array.prototype` do not match, and neither does a sentence
+ * that merely contains a call.
+ */
+const CALL_SPAN = /^(?:new\s+)?[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*|\[[^\][]*\])*\s*\(/;
+/** Something that makes the arguments a value rather than a parameter list. */
+const ARGUMENT_LITERAL = /['"`\[{]|\b\d|\b(?:true|false|null|undefined|NaN)\b/;
+
+/**
+ * Backticked spans that are a call, and so are something to run.
+ *
+ * The bar is deliberately high, because backticks carry filenames, flags and
+ * package names far more often than they carry code. A span qualifies when it
+ * is *entirely* a call, its parentheses balance, and its outermost argument
+ * list is either empty or contains a literal -- so `pluralize('passerby')` and
+ * `moment()` count, and `pluralize(word, count)`, which is a signature copied
+ * out of a README rather than a call somebody made, does not.
+ */
+function inlineExpressions(report: ParsedReport): Evidence[] {
+  const found: Evidence[] = [];
+  for (const span of report.inlineCode) {
+    if (!CALL_SPAN.test(span.text)) continue;
+    const args = outermostArguments(span.text);
+    if (args === null) continue;
+    if (args.trim().length > 0 && !ARGUMENT_LITERAL.test(args)) continue;
+    found.push({ text: span.text, line: span.line });
+    if (found.length >= 50) break;
+  }
+  return found;
+}
+
+/**
+ * The text inside the first parenthesis group, or `null` when the span is not
+ * a whole balanced expression. Quoted text is skipped so a bracket inside a
+ * string cannot unbalance the count.
+ */
+function outermostArguments(text: string): string | null {
+  let depth = 0;
+  let opened = -1;
+  let closed = -1;
+  let quote: string | null = null;
+  for (let at = 0; at < text.length; at += 1) {
+    const char = text[at];
+    if (quote !== null) {
+      if (char === '\\') at += 1;
+      else if (char === quote) quote = null;
+      continue;
+    }
+    if (char === "'" || char === '"' || char === '`') { quote = char; continue; }
+    if (char === '(') { depth += 1; if (opened === -1) opened = at; continue; }
+    if (char === ')') {
+      depth -= 1;
+      if (depth < 0) return null;
+      if (depth === 0 && closed === -1) closed = at;
+    }
+  }
+  if (quote !== null || depth !== 0 || opened === -1 || closed === -1) return null;
+  const tail = text.slice(text.lastIndexOf(')') + 1).trim();
+  if (tail.length > 0 && !/^[;,.]$/.test(tail)) return null;
+  return text.slice(opened + 1, closed);
 }
 
 /**

@@ -266,6 +266,17 @@ what one remaining gap looks like.
 A Python or Go snippet is counted as reproduction steps and otherwise left
 alone. Every other category is language-neutral.
 
+**Outside a code block, it only reads calls.** A reporter who never opens a
+fence has still handed over something to run when the sentence contains
+`` `pluralize('passerby')` ``, and `no-reproduction-steps` does not fire on
+that. The bar is deliberately high: the whole backticked span has to be a call,
+its parentheses have to balance, and its arguments have to be empty or contain a
+literal. `` `index.js` ``, `` `--no-color` `` and `` `pluralize(word, count)` ``
+— a signature copied out of a README rather than a call anybody made — are not
+code. On the 616-report corpus below this removed 62 reports from
+`no-reproduction-steps`, each one a report the tool had said contained no code
+while quoting the code it contained.
+
 **It is a lexer, not a parser.** It has no model of scope. Where a construct is
 ambiguous it treats the name as *defined*, which loses gaps rather than
 inventing them. `unresolved-reference` only fires on a name that is called
@@ -318,6 +329,58 @@ That is a measurement of this tool's rules against that corpus, not a claim
 about how many of those issues are truly irreproducible. Some gaps it reports
 are things the maintainer already knows; some reports it passes cannot be
 reproduced for reasons no linter can see.
+
+## Does a clean result predict a reproducible report? No.
+
+That is the first paragraph of this README stated as a warning rather than a
+caveat, and it has now been measured rather than asserted.
+
+**The corpus.** 616 bug reports from 40 JavaScript packages, each one labelled
+by *execution*: a candidate expression was taken from the report, run at the
+commit the issue was filed against and again at the maintainer's fix commit, and
+labelled **runnable** only when the two runs behaved differently. 114 of the 616
+cleared that bar. Nothing about the label is a judgement — it is the outcome of
+running code at two commits, and it is the closest thing to ground truth this
+question has.
+
+Scored against those labels, with "no blocking gap" read as the tool letting a
+report through:
+
+|  | labelled runnable | labelled not |
+| --- | --- | --- |
+| **let through** | 9 | 52 |
+| **blocked** | 105 | 450 |
+
+Base rate 18.5%. Accuracy 74.5%, but **precision 14.8%** — a report this tool
+lets through is *less* likely to be runnable than one picked at random — and
+**recall 7.9%**. Every category fires at close to the base rate:
+`no-reproduction-steps` 21.9%, `no-version` 18.5%, `unresolved-reference` 18.9%,
+`no-environment` 19.5%. A rule that fires at the base rate carries no
+information about the thing it is being asked to predict.
+
+**What that means.** It is not a defect being reported here; it is the boundary
+the tool has claimed from the beginning, with a number on it. `repro-check`
+finds absences. Whether a defect can be reproduced turns on whether the report
+names a call and a value, and that is a different question that this tool has
+never answered and cannot. **Do not gate merges, close issues, or rank triage
+queues on a clean result.** Post the gaps to the reporter and stop there.
+
+**Caveat that cuts the other way.** These 616 were selected *because* no regex
+could read a claim out of them — reports with a plain fenced snippet and an
+explicit expected value were filtered out before this corpus existed. So they
+are unusually gap-heavy, and the matrix describes that population, not every
+tracker. The finding that survives the selection is the per-category one: within
+this population, no rule separates the runnable reports from the rest.
+
+**Re-derive it.** The scorer ships here and reads any corpus in that shape:
+
+```console
+npm run build
+node scripts/measure-agreement.mjs <labels.json> --cache <dir>
+```
+
+The label file's docblock states the two fields it needs. The corpus these
+figures came from is not public; the script is, and so is the shape.
 
 ## Development
 

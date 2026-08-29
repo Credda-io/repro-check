@@ -66,3 +66,18 @@ test('excerpt flattens and truncates', () => {
   assert.equal(excerpt('  a\n  b  '), 'a b');
   assert.equal(excerpt('x'.repeat(200)).length, 90);
 });
+
+test('backticked spans in prose are collected, with the line they were written on', () => {
+  const report = parseReport("First line.\n\nCalling `pluralize('passerby')` returns the wrong plural.\n");
+  assert.deepEqual(report.inlineCode, [{ text: "pluralize('passerby')", line: 3 }]);
+});
+
+test('a backticked span inside a code block is not an inline span', () => {
+  const report = parseReport('```js\nconst a = `template`;\n```\n');
+  assert.deepEqual(report.inlineCode, []);
+});
+
+test('a double-backtick span may contain a single backtick', () => {
+  const report = parseReport('Use ``a `b` c`` here.\n');
+  assert.deepEqual(report.inlineCode, [{ text: 'a `b` c', line: 1 }]);
+});

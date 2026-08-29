@@ -79,6 +79,13 @@ function unfilledTemplate(signals: Signals): Gap[] {
 function noReproductionSteps(signals: Signals): Gap[] {
   const hasBlock = signals.report.blocks.some((block) => block.body.trim().length > 0);
   if (hasBlock || signals.commands.length > 0 || signals.reproLinks.length > 0) return [];
+  /*
+   * A reporter who never opened a fence has still handed over something to run
+   * when the sentence contains `pluralize('passerby')`. Saying "no code" about
+   * that report is simply false, and it was the single most common false
+   * statement this tool made on real trackers.
+   */
+  if (signals.inlineExpressions.length > 0) return [];
   if (signals.numberedSteps.length >= 2) return [];
 
   const onlyImages = signals.report.images.length > 0;
