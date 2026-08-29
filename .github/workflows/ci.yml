@@ -1,10 +1,12 @@
 # Typecheck, test, build.
 #
 # `npm test` is Node's own runner over the TypeScript sources with no build
-# step, which needs type stripping on by default -- Node 22.18 or newer, or 24
-# and up. That is why the matrix starts at 22 rather than at the 20.6 in
-# `engines`: 20.6 is what the *published* package needs, since consumers install
-# compiled JavaScript from dist/ and have no TypeScript to strip.
+# step, which needs type stripping -- asked for explicitly with
+# `--experimental-strip-types`, so the suite also runs on the Node 22 releases
+# before 22.18, where stripping is not yet on by default. That is why the matrix
+# starts at 22 rather than at the 20.6 in `engines`: 20.6 is what the
+# *published* package needs, since consumers install compiled JavaScript from
+# dist/ and have no TypeScript to strip.
 #
 # The `build-runs-on-node-20` job below is the check that keeps those two
 # numbers honest.

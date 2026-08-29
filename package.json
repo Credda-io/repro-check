@@ -49,7 +49,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test \"test/**/*.test.ts\"",
+    "test": "node --experimental-strip-types --test \"test/**/*.test.ts\"",
     "check": "npm run typecheck && npm run test"
   }
 }
