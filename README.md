@@ -335,28 +335,47 @@ reproduced for reasons no linter can see.
 That is the first paragraph of this README stated as a warning rather than a
 caveat, and it has now been measured rather than asserted.
 
-**The corpus.** 616 bug reports from 40 JavaScript packages, each one labelled
-by *execution*: a candidate expression was taken from the report, run at the
-commit the issue was filed against and again at the maintainer's fix commit, and
-labelled **runnable** only when the two runs behaved differently. 114 of the 616
-cleared that bar. Nothing about the label is a judgement — it is the outcome of
-running code at two commits, and it is the closest thing to ground truth this
+**The corpus.** 1,238 bug reports from 147 JavaScript packages, merged from four
+independent harvest runs over three repository pools and two claim parsers. Each
+report is labelled by *execution*: a candidate expression was taken from it, run
+at the commit the issue was filed against and again at the maintainer's fix
+commit, and labelled **runnable** only when the two runs behaved differently.
+165 cleared that bar. Nothing about the label is a judgement — it is the outcome
+of running code at two commits, and it is the closest thing to ground truth this
 question has.
+
+**Not every rejection is a label.** 401 of those reports were rejected because
+the harness never got far enough to learn anything about them: the fix commit
+had no first parent to pin against, the package would not load at the pin, or
+the checkout would not provision. A report whose repository loses its pin is not
+thereby a worse report, so counting those as "not runnable" pads the negative
+class with noise and *flatters* any tool scored against it. The headline below
+is the **executed-only** set — 833 reports where the expression actually ran at
+both commits, base rate 19.7%. `scripts/collect-labels.mjs --executed-only`
+emits exactly that set; without the flag it emits all 1,238, and both are
+reported here.
 
 Scored against those labels, with "no blocking gap" read as the tool letting a
 report through:
 
-|  | labelled runnable | labelled not |
+| executed-only (833) | labelled runnable | labelled not |
 | --- | --- | --- |
-| **let through** | 9 | 52 |
-| **blocked** | 105 | 450 |
+| **let through** | 12 | 82 |
+| **blocked** | 152 | 587 |
 
-Base rate 18.5%. Accuracy 74.5%, but **precision 14.8%** — a report this tool
+Base rate 19.7%. Accuracy 71.9%, but **precision 12.8%** — a report this tool
 lets through is *less* likely to be runnable than one picked at random — and
-**recall 7.9%**. Every category fires at close to the base rate:
-`no-reproduction-steps` 21.9%, `no-version` 18.5%, `unresolved-reference` 18.9%,
-`no-environment` 19.5%. A rule that fires at the base rate carries no
-information about the thing it is being asked to predict.
+**recall 7.3%**. On all 1,238 rows the same shape is worse, not better: base
+rate 13.3%, precision 7.5%, recall 7.3%.
+
+Every category fires at or near the base rate: `no-environment` 21.0%,
+`no-version` 20.6%, `unresolved-reference` 19.1%, `no-failure-evidence` 22.6%,
+`expected-without-observed` 18.8%. A rule that fires at the base rate carries no
+information about the thing it is being asked to predict. Two lean the *wrong*
+way — `no-reproduction-steps` fires on reports that are 29.4% runnable and
+`incomplete-snippet` on 30.8%, both above base rate on small counts, so the
+reports these rules flag are if anything slightly *more* likely to be runnable
+than the ones they clear.
 
 **What that means.** It is not a defect being reported here; it is the boundary
 the tool has claimed from the beginning, with a number on it. `repro-check`
@@ -365,22 +384,35 @@ names a call and a value, and that is a different question that this tool has
 never answered and cannot. **Do not gate merges, close issues, or rank triage
 queues on a clean result.** Post the gaps to the reporter and stop there.
 
-**Caveat that cuts the other way.** These 616 were selected *because* no regex
-could read a claim out of them — reports with a plain fenced snippet and an
-explicit expected value were filtered out before this corpus existed. So they
-are unusually gap-heavy, and the matrix describes that population, not every
-tracker. The finding that survives the selection is the per-category one: within
-this population, no rule separates the runnable reports from the rest.
+**Caveat that cuts the other way.** Most of these reports were reached
+*because* no regex could read a claim out of them — reports with a plain fenced
+snippet and an explicit expected value were filtered out before the largest of
+the four runs existed. So the population is unusually gap-heavy, and the matrix
+describes it, not every tracker. The finding that survives the selection is the
+per-category one: within this population, no rule separates the runnable reports
+from the rest. Two further limits: the four runs share repositories, so a
+package with many issues weighs more than one with few; and 5 reports were
+skipped because no cached text for them exists.
 
-**Re-derive it.** The scorer ships here and reads any corpus in that shape:
+**What the last fix moved.** Scoring the same 616-row run before and after the
+inline-code-span fix (`b10ffeb`) — the defect this measurement found, where a
+report quoting `` `f(x)` `` inline was told it had no code — `no-reproduction-steps`
+went from firing on 176 reports to 114, and **precision did not move**: 14.8%
+either way, recall 7.0% to 7.9%, accuracy 75.3% to 74.5%. 62 reports stopped
+being told something false about themselves, which is worth doing on its own
+terms, and it bought no predictive power.
+
+**Re-derive it.** The scorer and the label collector both ship here:
 
 ```console
 npm run build
-node scripts/measure-agreement.mjs <labels.json> --cache <dir>
+node scripts/collect-labels.mjs <bench/harvested> --executed-only > labels.json
+node scripts/measure-agreement.mjs labels.json --cache <bench/harvested/.cache>
 ```
 
-The label file's docblock states the two fields it needs. The corpus these
-figures came from is not public; the script is, and so is the shape.
+Each script's docblock states what it reads and what it refuses to treat as a
+label. The corpus these figures came from is not public; the scripts are, and so
+is the shape.
 
 ## Development
 
