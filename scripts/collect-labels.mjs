@@ -61,6 +61,13 @@ const ARTIFACTS = [
    * strict subset of this one and is deliberately not listed: it would add no
    * row and would only give the shared repositories a second vote. */
   ['parser-widening-slice-scorecard.json', 'mechanically-parsed'],
+  /* The pool-wide admission arm of the same widening: the 301 newly-parsed
+   * candidates the seven-repository slice did not cover, across 90 repositories,
+   * every one decided by the same gate. It carries its rows explicitly rather
+   * than as an id list, because none of its 26 admissions is a directory in this
+   * corpus -- they were deliberately not folded in -- so `fromCase` would find
+   * nothing and `fromSiblings` would guess. */
+  ['parser-widening-pool-scorecard.json', 'mechanically-parsed'],
 ];
 
 /* An id is `<repo-tail>-<issue>`; the issue URL carries the slug the cache is keyed by. */
