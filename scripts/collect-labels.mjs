@@ -53,6 +53,14 @@ const ARTIFACTS = [
   ['binding-widening-slice-scorecard.json', 'mechanically-parsed'],
   ['owner-breadth-scorecard.json', 'mechanically-parsed'],
   ['stateful-surface-scorecard.json', 'mechanically-parsed'],
+  /* The admission arm of the 2026-08-30 parser widening. Its seven repositories
+   * overlap binding-widening-slice-scorecard.json entirely, and `add` above
+   * keeps one row per id with admission winning, so the overlap re-states
+   * verdicts rather than duplicating them. What it adds is the ten candidates
+   * only the widened parser produces. The BEFORE arm of the same slice is a
+   * strict subset of this one and is deliberately not listed: it would add no
+   * row and would only give the shared repositories a second vote. */
+  ['parser-widening-slice-scorecard.json', 'mechanically-parsed'],
 ];
 
 /* An id is `<repo-tail>-<issue>`; the issue URL carries the slug the cache is keyed by. */
