@@ -290,6 +290,19 @@ twenty lines out of your library to point at a line, those lines genuinely do
 not define what they use, and `repro-check` says so. That is accurate but not
 always useful; `--skip unresolved-reference` if your tracker is mostly that.
 
+**Every entry in the three signal lists decides a sample of its own.** Whether
+a report carries failure evidence, whether a template section was filled in and
+whether a version was given are each decided by a list of patterns, and a list
+is the easy place for a dead entry to sit. Measured on 2026-08-30 by recording
+every regex that matched during a full test run: five of the ten error patterns,
+four of the six version patterns and ten of the eleven placeholder patterns
+matched nothing the suite fed them, and deleting all five error patterns left
+the suite green while turning every Go panic and every `ENOENT` report into a
+`no-failure-evidence` gap it does not deserve. Each entry now carries a sample
+in [`test/patterns.test.ts`](test/patterns.test.ts), asserted at the pattern, in
+`checkIssue()` against the same report without it, and against every earlier
+entry in the list — so a pattern that decides nothing fails the suite.
+
 **Things it deliberately does not do**, because getting them right needs
 judgement about meaning rather than rules about text:
 
