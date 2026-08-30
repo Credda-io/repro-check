@@ -104,7 +104,7 @@ npm install --save-dev repro-check   # or: npx repro-check <file>
 
 Node 20.6 or newer.
 
-> **Not on npm yet — checked 2026-08-28.** `https://registry.npmjs.org/repro-check`
+> **Not on npm yet — checked 2026-08-30.** `https://registry.npmjs.org/repro-check`
 > returns 404, so neither command above resolves today, and the `npx` invocations
 > shown elsewhere in this README are illustrations of the finished interface
 > rather than commands you can run. Until `0.1.0` is published, use it from a
