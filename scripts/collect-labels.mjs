@@ -129,9 +129,17 @@ for (const [file, claimSource] of ARTIFACTS) {
         ...rejections.map((row) => ({ id: row.id, issue: row.issue, admitted: false, reason: row.reason })),
       ];
 
+  let dropped = 0;
   for (const row of rows) {
     const where = row.slug === undefined ? (fromUrl(row.issue) ?? fromCase(row.id) ?? fromSiblings(row.id, rejections)) : { slug: row.slug, issue: row.issue };
-    if (where === null) { console.error(`no issue URL for ${row.id} (${file})`); continue; }
+    if (where === null) {
+      /* Counted, not only printed. A row whose issue URL cannot be recovered
+       * leaves the label set, and stderr is the one place a reader of the
+       * emitted file never looks. */
+      dropped += 1;
+      console.error(`no issue URL for ${row.id} (${file})`);
+      continue;
+    }
     const harnessSide = !row.admitted && HARNESS_SIDE.has(String(row.reason));
     if (executedOnly && harnessSide) continue;
     add(row.id, { id: row.id, ...where, admitted: row.admitted, reason: row.reason ?? null, claimSource, harnessSide });
@@ -148,7 +156,21 @@ for (const [file, claimSource] of ARTIFACTS) {
     console.error(`${file}: no rows -- it carries neither \`rows\` nor \`admitted\`/\`rejections\``);
     process.exit(2);
   }
-  provenance.push({ artifact: file, claimSource, rows: rows.length, kept });
+  /* The same zero one level up. An artifact whose rows all left -- every one
+   * dropped for a missing URL, or every one excluded by `--executed-only` --
+   * contributes nothing while still being named in `sources` as a source of
+   * the label set. The provenance block recorded that as `kept: 0` and
+   * nothing read it, which is the shape this script was just fixed for.
+   * Stopping is right for both causes: the first is a defect, the second
+   * means the artifact does not belong in this run. */
+  if (kept === 0) {
+    console.error(
+      `${file}: ${rows.length} rows, none kept -- ${dropped} lost their issue URL and the rest ` +
+        `${executedOnly ? 'were harness-side, excluded by --executed-only' : 'were dropped'}`,
+    );
+    process.exit(2);
+  }
+  provenance.push({ artifact: file, claimSource, rows: rows.length, kept, dropped });
 }
 
 const rows = [...byId.values()];
