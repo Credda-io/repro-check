@@ -51,6 +51,7 @@ const ARTIFACTS = [
   ['scorecard.json', 'mechanically-parsed'],
   ['expansion/scorecard-yield-selected.json', 'mechanically-parsed'],
   ['binding-widening-slice-scorecard.json', 'mechanically-parsed'],
+  ['owner-breadth-scorecard.json', 'mechanically-parsed'],
 ];
 
 /* An id is `<repo-tail>-<issue>`; the issue URL carries the slug the cache is keyed by. */
