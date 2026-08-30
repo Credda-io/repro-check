@@ -173,23 +173,35 @@ test('no rendering ever calls a report reproducible', () => {
 });
 
 /**
- * The README quotes an issue body and the output it produces. A worked example
- * that no longer works is worse than none, because a reader takes it for a
- * description of the tool. So the README is read here and compared, rather than
- * trusted to whoever last changed a message.
+ * The README quotes two runs of the tool and the output each produces: the one
+ * at the top of the file, which is the first thing anybody reads, and the
+ * worked example further down. A worked example that no longer works is worse
+ * than none, because a reader takes it for a description of the tool. So the
+ * README is read here and compared, rather than trusted to whoever last
+ * changed a message.
+ *
+ * The top block is `vague.md` under the name the README gives it. It went
+ * unchecked until now for no better reason than that it names a file that does
+ * not exist in this repository -- and it is the block with the most readers.
  */
-test("the README's worked example is the output the tool actually produces", () => {
-  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
-  const marker = '$ repro-check test/fixtures/readme-example.md\n';
-  const start = readme.indexOf(marker);
-  assert.notEqual(start, -1, 'the README no longer contains the worked example');
-  const quoted = readme.slice(start + marker.length, readme.indexOf('\n```', start + marker.length));
-
-  const body = readFileSync(fixturePath('readme-example'), 'utf8');
-  const actual = formatText(checkIssue(body), {
+for (const quote of [
+  { marker: '$ npx repro-check issue.md\n', fixture: 'vague', name: 'issue.md' },
+  {
+    marker: '$ repro-check test/fixtures/readme-example.md\n',
+    fixture: 'readme-example',
     name: 'test/fixtures/readme-example.md',
-    color: false,
-  });
+  },
+]) {
+  test(`the README's \`${quote.name}\` output is what the tool actually produces`, () => {
+    const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+    const start = readme.indexOf(quote.marker);
+    assert.notEqual(start, -1, `the README no longer contains ${quote.name}`);
+    const from = start + quote.marker.length;
+    const quoted = readme.slice(from, readme.indexOf('\n```', from));
 
-  assert.equal(actual.trimEnd(), quoted.trimEnd());
-});
+    const body = readFileSync(fixturePath(quote.fixture), 'utf8');
+    const actual = formatText(checkIssue(body), { name: quote.name, color: false });
+
+    assert.equal(actual.trimEnd(), quoted.trimEnd());
+  });
+}
