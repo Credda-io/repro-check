@@ -51,8 +51,28 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # Three invocations that could not fail, made into three that can.
+      #
+      # `--version` exits 0 whatever happens: `readVersion()` catches
+      # everything and answers '0.0.0', so a dist/ layout change that breaks
+      # `new URL('../package.json', import.meta.url)` printed a number and
+      # passed. `--explain` had its output sent to /dev/null, so an empty
+      # description table passed. And `clean.md` exits 0 because the tool finds
+      # NOTHING in it -- which a checkIssue stubbed to report no gaps also
+      # does, so the one fixture here was the one that a stub survives.
       - name: the CLI runs on the oldest Node engines claims
         run: |
-          node dist/bin.js --version
-          node dist/bin.js --explain > /dev/null
+          set -euo pipefail
+          version=$(node dist/bin.js --version)
+          echo "version $version"
+          test "$version" != "0.0.0"
+          test "$version" = "$(node -p 'require("./package.json").version')"
+          # Every category the tool can report is described, not merely exit 0.
+          node dist/bin.js --explain | tee /tmp/explain.txt
+          test "$(grep -c '^[a-z-]\+$' /tmp/explain.txt)" = "10"
+          # A report with nothing wrong, and a report with something wrong.
           node dist/bin.js --no-color test/fixtures/clean.md
+          if node dist/bin.js --no-color test/fixtures/vague.md; then
+            echo "vague.md was reported clean, so this step proved nothing"
+            exit 1
+          fi
