@@ -43,6 +43,7 @@ Options
   --skip <a,b>        skip named gap categories
   --explain           list every gap category and exit
   --no-color          plain output
+  --color             colour even when stdout is not a terminal
   -h, --help          this text
   -v, --version       print the version
 

@@ -128,8 +128,10 @@ repro-check --format github issue.md     # GitHub Actions annotations
 repro-check --strict issue.md        # advisory gaps fail too
 repro-check --skip no-version,no-environment issue.md    # drop categories
 repro-check --no-color issue.md      # no ANSI escapes
+repro-check --color issue.md         # colour even when piped
 repro-check --explain                # what every category means
 repro-check --version                # the version, and nothing else
+repro-check --help                   # this list, from the tool itself
 ```
 
 The GitHub URL form shells out to the `gh` CLI. `repro-check` never opens a
