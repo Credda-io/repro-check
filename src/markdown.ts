@@ -21,6 +21,14 @@ export interface CodeBlock {
   readonly intro: string | null;
 }
 
+/** A backticked span in the report's prose, e.g. `pluralize('passerby')`. */
+export interface InlineCode {
+  /** The span's contents, without the backticks. */
+  readonly text: string;
+  /** 1-based line the span was written on. */
+  readonly line: number;
+}
+
 /** A heading and the text beneath it, up to the next heading. */
 export interface Section {
   /** Heading text with markers removed, e.g. `Steps to reproduce`. */
@@ -48,6 +56,8 @@ export interface ParsedReport {
   readonly htmlComments: readonly string[];
   /** Image references: Markdown images, `<img>` tags, bare image URLs. */
   readonly images: readonly string[];
+  /** Backticked spans in the prose. Spans inside code blocks are not here. */
+  readonly inlineCode: readonly InlineCode[];
 }
 
 const FENCE = /^(\s{0,3})(`{3,}|~{3,})[ \t]*([^\s`]*)/;
@@ -117,6 +127,7 @@ export function parseReport(source: string): ParsedReport {
     prose: withoutComments,
     htmlComments: readHtmlComments(normalized),
     images: readImages(normalized),
+    inlineCode: readInlineCode(withoutComments),
   };
 }
 
@@ -239,6 +250,39 @@ function readImages(text: string): string[] {
   let bare: RegExpExecArray | null;
   while ((bare = BARE_IMAGE_URL.exec(text)) !== null) found.add(bare[0]);
   return [...found];
+}
+
+/**
+ * Backticked spans, read out of the prose only.
+ *
+ * A lot of reporters never open a fence: the whole reproduction is
+ * `pluralize('passerby')` in the middle of a sentence. Treating that as no
+ * code at all made this tool tell maintainers a report contained none when it
+ * plainly did. The spans are collected here without judgement; deciding which
+ * of them look like an expression is `signals.ts`'s job.
+ *
+ * `prose` has code blocks and HTML comments blanked out line-for-line, so a
+ * match offset in it is still the line the reporter wrote.
+ */
+function readInlineCode(prose: string): InlineCode[] {
+  const found: InlineCode[] = [];
+  const pattern = /(`+)(?!`)([^\n]*?)\1(?!`)/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(prose)) !== null) {
+    const text = match[2].trim();
+    if (text.length === 0) continue;
+    found.push({ text, line: lineOfIn(prose, match.index) });
+    if (found.length >= 200) break;
+  }
+  return found;
+}
+
+function lineOfIn(text: string, offset: number): number {
+  let line = 1;
+  for (let at = 0; at < offset && at < text.length; at += 1) {
+    if (text[at] === '\n') line += 1;
+  }
+  return line;
 }
 
 /** Shortens text for use inside a message, on one line. */

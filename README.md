@@ -57,10 +57,21 @@ three days later.
 
 ## What it has to do with Credda
 
-[Credda](https://credda.io) finds the bugs and security vulnerabilities in a
-company's production and QA environments, reproduces the failure, diagnoses the
-cause, writes the patch, proves it with a test that fails before and passes
-after, and opens a pull request. It runs in your own CI. It proposes and never
+[Credda](https://credda.io) takes a bug report or security vulnerability a
+customer has labelled, reproduces the failure, diagnoses the cause, writes the
+patch, proves it with a test that fails before and passes after, and hands back
+a diff. It runs in your own CI. Whether that diff becomes a
+pull request depends on which mechanism delivered it, and the two answer
+differently: the **GitHub App** path opens one with no flag and no switch, for a
+run that reaches `READY_FOR_REVIEW` with a proven verdict; the **GitHub Action**
+opens none unless you set its `open-pull-request` input, which defaults to
+`false`, **and** add `contents: write` and `pull-requests: write` to your own
+workflow's `permissions:` block, which a default install does not grant. Turning
+the input on without both scopes fails at that step rather than opening
+anything -- and that input is declared on no version a caller can reach: it is
+absent from `action.yml` at the `v1` tag and on the action's default branch
+alike, so setting it today parses, runs green and delivers nothing. How often a
+run reaches a proven fix at all has not been measured. It proposes and never
 merges.
 
 `repro-check` works on the report that arrives before any of that can start. A
@@ -96,16 +107,17 @@ npm install --save-dev repro-check   # or: npx repro-check <file>
 
 Node 20.6 or newer.
 
-> **Not on npm yet — checked 2026-08-28.** `https://registry.npmjs.org/repro-check`
+> **Not on npm yet — checked 2026-08-30.** `https://registry.npmjs.org/repro-check`
 > returns 404, so neither command above resolves today, and the `npx` invocations
 > shown elsewhere in this README are illustrations of the finished interface
 > rather than commands you can run. Until `0.1.0` is published, use it from a
 > checkout: `npm install && npm run build && node dist/bin.js issue.md`.
 >
-> Running the test suite from source needs Node **22.18 or newer** (or 24) — it
-> runs Node's own test runner straight over the TypeScript with no build step,
-> which needs type stripping on by default. The `20.6` above is what the
-> *published* package needs, since that ships compiled JavaScript.
+> Running the test suite from source needs Node **22.6 or newer** — it runs
+> Node's own test runner straight over the TypeScript with no build step, and
+> `npm test` passes `--experimental-strip-types` itself, so no newer Node is
+> required for it. The `20.6` above is what the *published* package needs,
+> since that ships compiled JavaScript.
 
 ## Use
 
@@ -120,8 +132,10 @@ repro-check --format github issue.md     # GitHub Actions annotations
 repro-check --strict issue.md        # advisory gaps fail too
 repro-check --skip no-version,no-environment issue.md    # drop categories
 repro-check --no-color issue.md      # no ANSI escapes
+repro-check --color issue.md         # colour even when piped
 repro-check --explain                # what every category means
 repro-check --version                # the version, and nothing else
+repro-check --help                   # this list, from the tool itself
 ```
 
 The GitHub URL form shells out to the `gh` CLI. `repro-check` never opens a
@@ -134,11 +148,19 @@ fetched.
 | --- | --- |
 | `0` | No gaps of the relevant severity were found |
 | `1` | Gaps were found |
-| `2` | The input could not be read, or the command line was wrong |
+| `2` | The input was empty or could not be read, or the command line was wrong |
 
-Exit 2 covers both halves: a file that does not exist, a URL that is not a
-GitHub issue, `gh` not being installed, and also an unknown flag, an unknown
-`--format` or an unknown `--skip` category. An unrecognised category is an error
+Exit 2 covers both halves: a file that does not exist, a file that is empty, a
+URL that is not a GitHub issue, `gh` not being installed, and also an unknown
+flag, an unknown `--format` or an unknown `--skip` category.
+
+An **empty** input exits 2 rather than reporting gaps. Every gap this tool looks
+for is the absence of something, so a zero-byte document satisfies all of them
+at once and used to render as the worst report ever filed — which meant a
+mistyped path or a `gh` call that returned nothing came back looking like a
+verdict about somebody's issue. Running `repro-check` with no arguments at a
+terminal now prints the usage instead of waiting on stdin for input nobody is
+going to type; piping still works, with or without the explicit `-`. An unrecognised category is an error
 rather than a silent no-op, because a typo in a `--skip` list would otherwise
 quietly turn a check back on.
 
@@ -250,6 +272,17 @@ what one remaining gap looks like.
 A Python or Go snippet is counted as reproduction steps and otherwise left
 alone. Every other category is language-neutral.
 
+**Outside a code block, it only reads calls.** A reporter who never opens a
+fence has still handed over something to run when the sentence contains
+`` `pluralize('passerby')` ``, and `no-reproduction-steps` does not fire on
+that. The bar is deliberately high: the whole backticked span has to be a call,
+its parentheses have to balance, and its arguments have to be empty or contain a
+literal. `` `index.js` ``, `` `--no-color` `` and `` `pluralize(word, count)` ``
+— a signature copied out of a README rather than a call anybody made — are not
+code. On the 616-report corpus below this removed 62 reports from
+`no-reproduction-steps`, each one a report the tool had said contained no code
+while quoting the code it contained.
+
 **It is a lexer, not a parser.** It has no model of scope. Where a construct is
 ambiguous it treats the name as *defined*, which loses gaps rather than
 inventing them. `unresolved-reference` only fires on a name that is called
@@ -260,6 +293,19 @@ can just as easily be JSX body text or a word in somebody's pasted build output.
 twenty lines out of your library to point at a line, those lines genuinely do
 not define what they use, and `repro-check` says so. That is accurate but not
 always useful; `--skip unresolved-reference` if your tracker is mostly that.
+
+**Every entry in the three signal lists decides a sample of its own.** Whether
+a report carries failure evidence, whether a template section was filled in and
+whether a version was given are each decided by a list of patterns, and a list
+is the easy place for a dead entry to sit. Measured on 2026-08-30 by recording
+every regex that matched during a full test run: five of the ten error patterns,
+four of the six version patterns and ten of the eleven placeholder patterns
+matched nothing the suite fed them, and deleting all five error patterns left
+the suite green while turning every Go panic and every `ENOENT` report into a
+`no-failure-evidence` gap it does not deserve. Each entry now carries a sample
+in [`test/patterns.test.ts`](test/patterns.test.ts), asserted at the pattern, in
+`checkIssue()` against the same report without it, and against every earlier
+entry in the list — so a pattern that decides nothing fails the suite.
 
 **Things it deliberately does not do**, because getting them right needs
 judgement about meaning rather than rules about text:
@@ -303,6 +349,90 @@ about how many of those issues are truly irreproducible. Some gaps it reports
 are things the maintainer already knows; some reports it passes cannot be
 reproduced for reasons no linter can see.
 
+## Does a clean result predict a reproducible report? No.
+
+That is the first paragraph of this README stated as a warning rather than a
+caveat, and it has now been measured rather than asserted.
+
+**The corpus.** 1,238 bug reports from 147 JavaScript packages, merged from four
+independent harvest runs over three repository pools and two claim parsers. Each
+report is labelled by *execution*: a candidate expression was taken from it, run
+at the commit the issue was filed against and again at the maintainer's fix
+commit, and labelled **runnable** only when the two runs behaved differently.
+165 cleared that bar. Nothing about the label is a judgement — it is the outcome
+of running code at two commits, and it is the closest thing to ground truth this
+question has.
+
+**Not every rejection is a label.** 401 of those reports were rejected because
+the harness never got far enough to learn anything about them: the fix commit
+had no first parent to pin against, the package would not load at the pin, or
+the checkout would not provision. A report whose repository loses its pin is not
+thereby a worse report, so counting those as "not runnable" pads the negative
+class with noise and *flatters* any tool scored against it. The headline below
+is the **executed-only** set — 833 reports where the expression actually ran at
+both commits, base rate 19.7%. `scripts/collect-labels.mjs --executed-only`
+emits exactly that set; without the flag it emits all 1,238, and both are
+reported here.
+
+Scored against those labels, with "no blocking gap" read as the tool letting a
+report through:
+
+| executed-only (833) | labelled runnable | labelled not |
+| --- | --- | --- |
+| **let through** | 12 | 82 |
+| **blocked** | 152 | 587 |
+
+Base rate 19.7%. Accuracy 71.9%, but **precision 12.8%** — a report this tool
+lets through is *less* likely to be runnable than one picked at random — and
+**recall 7.3%**. On all 1,238 rows the same shape is worse, not better: base
+rate 13.3%, precision 7.5%, recall 7.3%.
+
+Every category fires at or near the base rate: `no-environment` 21.0%,
+`no-version` 20.6%, `unresolved-reference` 19.1%, `no-failure-evidence` 22.6%,
+`expected-without-observed` 18.8%. A rule that fires at the base rate carries no
+information about the thing it is being asked to predict. Two lean the *wrong*
+way — `no-reproduction-steps` fires on reports that are 29.4% runnable and
+`incomplete-snippet` on 30.8%, both above base rate on small counts, so the
+reports these rules flag are if anything slightly *more* likely to be runnable
+than the ones they clear.
+
+**What that means.** It is not a defect being reported here; it is the boundary
+the tool has claimed from the beginning, with a number on it. `repro-check`
+finds absences. Whether a defect can be reproduced turns on whether the report
+names a call and a value, and that is a different question that this tool has
+never answered and cannot. **Do not gate merges, close issues, or rank triage
+queues on a clean result.** Post the gaps to the reporter and stop there.
+
+**Caveat that cuts the other way.** Most of these reports were reached
+*because* no regex could read a claim out of them — reports with a plain fenced
+snippet and an explicit expected value were filtered out before the largest of
+the four runs existed. So the population is unusually gap-heavy, and the matrix
+describes it, not every tracker. The finding that survives the selection is the
+per-category one: within this population, no rule separates the runnable reports
+from the rest. Two further limits: the four runs share repositories, so a
+package with many issues weighs more than one with few; and 5 reports were
+skipped because no cached text for them exists.
+
+**What the last fix moved.** Scoring the same 616-row run before and after the
+inline-code-span fix (`b10ffeb`) — the defect this measurement found, where a
+report quoting `` `f(x)` `` inline was told it had no code — `no-reproduction-steps`
+went from firing on 176 reports to 114, and **precision did not move**: 14.8%
+either way, recall 7.0% to 7.9%, accuracy 75.3% to 74.5%. 62 reports stopped
+being told something false about themselves, which is worth doing on its own
+terms, and it bought no predictive power.
+
+**Re-derive it.** The scorer and the label collector both ship here:
+
+```console
+npm run build
+node scripts/collect-labels.mjs <bench/harvested> --executed-only > labels.json
+node scripts/measure-agreement.mjs labels.json --cache <bench/harvested/.cache>
+```
+
+Each script's docblock states what it reads and what it refuses to treat as a
+label. The corpus these figures came from is not public; the scripts are, and so
+is the shape.
+
 ## Development
 
 ```console
@@ -313,10 +443,10 @@ npm run build
 ```
 
 `npm test` is Node's own runner over the TypeScript sources with no build step,
-so it needs a Node with type stripping on by default -- **22.18 or newer, or 24
-and up**. On Node 22.6 to 22.17 every file fails to load with
-`ERR_UNKNOWN_FILE_EXTENSION`; run
-`node --experimental-strip-types --test "test/**/*.test.ts"` instead.
+so it needs a Node that can strip types -- **22.6 or newer**. The script passes
+`--experimental-strip-types` explicitly rather than relying on it being on by
+default, so it runs unchanged on 22.6 through 22.17 as well as on the newer
+Nodes that need no flag.
 `engines` deliberately still says `>=20.6.0`, because that is what the
 *published* package needs: consumers install compiled JavaScript and have no
 TypeScript to strip.
