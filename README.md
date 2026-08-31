@@ -113,10 +113,11 @@ Node 20.6 or newer.
 > rather than commands you can run. Until `0.1.0` is published, use it from a
 > checkout: `npm install && npm run build && node dist/bin.js issue.md`.
 >
-> Running the test suite from source needs Node **22.18 or newer** (or 24) — it
-> runs Node's own test runner straight over the TypeScript with no build step,
-> which needs type stripping on by default. The `20.6` above is what the
-> *published* package needs, since that ships compiled JavaScript.
+> Running the test suite from source needs Node **22.6 or newer** — it runs
+> Node's own test runner straight over the TypeScript with no build step, and
+> `npm test` passes `--experimental-strip-types` itself, so no newer Node is
+> required for it. The `20.6` above is what the *published* package needs,
+> since that ships compiled JavaScript.
 
 ## Use
 
@@ -442,10 +443,10 @@ npm run build
 ```
 
 `npm test` is Node's own runner over the TypeScript sources with no build step,
-so it needs a Node with type stripping on by default -- **22.18 or newer, or 24
-and up**. On Node 22.6 to 22.17 every file fails to load with
-`ERR_UNKNOWN_FILE_EXTENSION`; run
-`node --experimental-strip-types --test "test/**/*.test.ts"` instead.
+so it needs a Node that can strip types -- **22.6 or newer**. The script passes
+`--experimental-strip-types` explicitly rather than relying on it being on by
+default, so it runs unchanged on 22.6 through 22.17 as well as on the newer
+Nodes that need no flag.
 `engines` deliberately still says `>=20.6.0`, because that is what the
 *published* package needs: consumers install compiled JavaScript and have no
 TypeScript to strip.
