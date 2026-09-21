@@ -11,15 +11,20 @@ npm run check    # typecheck, then the tests
 ```
 
 The test runner is Node's own, over the TypeScript sources with no build step.
-That needs a Node with type stripping **on by default -- 22.18 or newer, or 24
-and up**. On Node 22.6 to 22.17 the suite fails to load every file with
-`ERR_UNKNOWN_FILE_EXTENSION`; run it as
+That needs **Node 22.6 or newer**, and nothing else: `npm test` already passes
+`--experimental-strip-types` itself, so type stripping does not have to be on
+by default.
 
-```
-node --experimental-strip-types --test "test/**/*.test.ts"
-```
+This paragraph said, until 2026-09-20, that you needed "22.18 or newer, or 24
+and up", that on 22.6 to 22.17 the suite fails to load every file with
+`ERR_UNKNOWN_FILE_EXTENSION`, and that you should then run
+`node --experimental-strip-types --test "test/**/*.test.ts"` by hand. That was
+true before the flag was moved into the `test` script. It is not now -- that is
+verbatim what the script runs -- and README.md:119-121 has said so for a while.
+Measured 2026-09-20: `npm run check` passes on Node v22.14.0, inside the range
+this paragraph called broken.
 
-and it passes. Either way that is your Node, not your change.
+If the suite does fail to load, that is your Node, not your change.
 
 **`engines` deliberately still says `>=20.6.0`,** because that is the published
 package's requirement -- consumers install compiled JavaScript from `dist/` and
