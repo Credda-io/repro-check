@@ -14,7 +14,7 @@ one issue at a time, by hand, days after the report was filed.
 spends an afternoon on it.
 
 ```console
-$ npx repro-check issue.md
+$ npx @credda/repro-check issue.md
 issue.md: 4 gaps found -- 3 blocking, 1 advisory
 
 BLOCKING
@@ -105,16 +105,14 @@ more.
 ## Install
 
 ```console
-npm install --save-dev repro-check   # or: npx repro-check <file>
+npm install --save-dev @credda/repro-check   # or: npx @credda/repro-check <file>
 ```
 
 Node 20.6 or newer.
 
-> **Not on npm yet — checked 2026-08-30.** `https://registry.npmjs.org/repro-check`
-> returns 404, so neither command above resolves today, and the `npx` invocations
-> shown elsewhere in this README are illustrations of the finished interface
-> rather than commands you can run. Until `0.1.0` is published, use it from a
-> checkout: `npm install && npm run build && node dist/bin.js issue.md`.
+> **Not on npm yet (checked 2026-11-26).** `0.1.0` will publish as
+> `@credda/repro-check`; the command it installs is still `repro-check`. Until
+> then, use it from a checkout: `npm install && npm run build && node dist/bin.js issue.md`.
 >
 > Running the test suite from source needs Node **22.6 or newer** — it runs
 > Node's own test runner straight over the TypeScript with no build step, and
