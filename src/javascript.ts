@@ -311,10 +311,10 @@ function boundNames(blanked: string): Set<string> {
   // A mapped type's key, and a `for (x in y)` head.
   for (const match of blanked.matchAll(/\[\s*([A-Za-z_$][\w$]*)\s+in\b/g)) take(match[1]);
   // A signature's parameters: `read(path: string): Buffer`, with no body.
-  for (const match of blanked.matchAll(/([A-Za-z_$][\w$]*)?\s*\(([^()]*)\)\s*:/g)) {
-    take(match[1]);
-    take(match[2]);
-  }
+  // Two patterns, each anchored on a character: the name was optional and
+  // followed by `\s*`, so a match began at every space (quadratic).
+  for (const match of blanked.matchAll(/\(([^()]*)\)\s*:/g)) take(match[1]);
+  for (const match of blanked.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(([^()]*)\)\s*:/g)) take(match[1]);
   // A type alias with no object body: `type Bar = $ZodString | Foo;`.
   for (const match of blanked.matchAll(/\btype\s+[A-Za-z_$][\w$]*[^=;{]*=([^;\n]*)/g)) take(match[1]);
   // The whole body of a declared type, whose names are declarations by nature.

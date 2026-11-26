@@ -115,11 +115,12 @@ test('read paths and relative specifiers are collected', () => {
 });
 
 test('the binding patterns stay linear on long runs of spaces', () => {
-  for (const head of ['function', 'import']) {
-    const code = `${head}${' '.repeat(20_000)}!`;
+  // Linear now: about 2 ms here. Quadratic was 640 ms at 40,000 spaces, cubic was minutes.
+  for (const head of ['function', 'import', 'x']) {
+    const code = `${head}${' '.repeat(100_000)}!`;
     const began = performance.now();
     unresolvedNames(code);
-    assert.ok(performance.now() - began < 500, `${head} followed by spaces took ${Math.round(performance.now() - began)} ms`);
+    assert.ok(performance.now() - began < 1000, `${head} followed by spaces took ${Math.round(performance.now() - began)} ms`);
   }
 });
 
