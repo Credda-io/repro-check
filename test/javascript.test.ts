@@ -113,3 +113,18 @@ test('read paths and relative specifiers are collected', () => {
     ['import:./helper.js', 'read:fixtures/deploy.yaml'],
   );
 });
+
+test('the binding patterns stay linear on long runs of spaces', () => {
+  for (const head of ['function', 'import']) {
+    const code = `${head}${' '.repeat(20_000)}!`;
+    const began = performance.now();
+    unresolvedNames(code);
+    assert.ok(performance.now() - began < 500, `${head} followed by spaces took ${Math.round(performance.now() - began)} ms`);
+  }
+});
+
+test('function and import heads still bind their names', () => {
+  assert.deepEqual(names('function  *  gen ( a, b ) { return a + b + gen; }'), []);
+  assert.deepEqual(names('const f = function (x) { return x; };\nf(1);'), []);
+  assert.deepEqual(names("import type { A } from 'a';\nimport   B,  { c }   from 'b';\nB(c);", true), []);
+});
