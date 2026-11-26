@@ -277,8 +277,10 @@ function boundNames(blanked: string): Set<string> {
 
   // `const {a, b: c} = ...`, `let x`, `var x, y`, including for-of/in heads.
   for (const match of blanked.matchAll(/\b(?:const|let|var)\s+([\s\S]*?)(?:=[^=]|;|\n|$)/g)) take(match[1]);
-  // `function name(params)`, `function* name(params)`.
-  for (const match of blanked.matchAll(/\bfunction\s*\*?\s*([A-Za-z_$][\w$]*)?\s*\(([^()]*)\)/g)) {
+  // `function name(params)`, `function* name(params)`. Each run of spaces has
+  // one way to match: `\s*\*?\s*` and a lone `\s*` around an optional name
+  // were cubic on `function` followed by spaces (found by `credda security`).
+  for (const match of blanked.matchAll(/\bfunction(?:\s*\*)?\s*(?:([A-Za-z_$][\w$]*)\s*)?\(([^()]*)\)/g)) {
     take(match[1]);
     take(match[2]);
   }
@@ -290,7 +292,9 @@ function boundNames(blanked: string): Set<string> {
   for (const match of blanked.matchAll(/([A-Za-z_$][\w$]*)\s*=>/g)) take(match[1]);
   for (const match of blanked.matchAll(/\(([^()]*)\)\s*(?::[^=>{;\n]+)?=>/g)) take(match[1]);
   // Every `import` form, including `import type` and namespace imports.
-  for (const match of blanked.matchAll(/\bimport\s+(?:type\s+)?([\s\S]*?)\s+from\b/g)) take(match[1]);
+  // One whitespace character on each side of the lazy list: `\s+` there was
+  // cubic on `import` followed by spaces (found by `credda security`).
+  for (const match of blanked.matchAll(/\bimport\s(?:\s*type\s)?([\s\S]*?)\sfrom\b/g)) take(match[1]);
   for (const match of blanked.matchAll(/\bimport\s+([A-Za-z_$][\w$]*)\s*[;\n]/g)) take(match[1]);
   // Class and object method heads: `name(params) {`, but not `if (cond) {`.
   for (const match of blanked.matchAll(/([A-Za-z_$][\w$]*)\s*\(([^()]*)\)\s*(?::[^{;\n]+)?\{/g)) {
@@ -307,10 +311,10 @@ function boundNames(blanked: string): Set<string> {
   // A mapped type's key, and a `for (x in y)` head.
   for (const match of blanked.matchAll(/\[\s*([A-Za-z_$][\w$]*)\s+in\b/g)) take(match[1]);
   // A signature's parameters: `read(path: string): Buffer`, with no body.
-  for (const match of blanked.matchAll(/([A-Za-z_$][\w$]*)?\s*\(([^()]*)\)\s*:/g)) {
-    take(match[1]);
-    take(match[2]);
-  }
+  // Two patterns, each anchored on a character: the name was optional and
+  // followed by `\s*`, so a match began at every space (quadratic).
+  for (const match of blanked.matchAll(/\(([^()]*)\)\s*:/g)) take(match[1]);
+  for (const match of blanked.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(([^()]*)\)\s*:/g)) take(match[1]);
   // A type alias with no object body: `type Bar = $ZodString | Foo;`.
   for (const match of blanked.matchAll(/\btype\s+[A-Za-z_$][\w$]*[^=;{]*=([^;\n]*)/g)) take(match[1]);
   // The whole body of a declared type, whose names are declarations by nature.
