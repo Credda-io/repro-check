@@ -185,7 +185,7 @@ test('no rendering ever calls a report reproducible', () => {
  * not exist in this repository -- and it is the block with the most readers.
  */
 for (const quote of [
-  { marker: '$ npx repro-check issue.md\n', fixture: 'vague', name: 'issue.md' },
+  { marker: '$ npx @credda/repro-check issue.md\n', fixture: 'vague', name: 'issue.md' },
   {
     marker: '$ repro-check test/fixtures/readme-example.md\n',
     fixture: 'readme-example',

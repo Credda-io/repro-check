@@ -1,5 +1,5 @@
 {
-  "name": "repro-check",
+  "name": "@credda/repro-check",
   "version": "0.1.0",
   "description": "A heuristic linter for bug reports: finds what a reproduction attempt would be missing.",
   "keywords": [
