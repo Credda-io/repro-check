@@ -110,9 +110,7 @@ npm install --save-dev @credda/repro-check   # or: npx @credda/repro-check <file
 
 Node 20.6 or newer.
 
-> **Not on npm yet (checked 2026-11-26).** `0.1.0` will publish as
-> `@credda/repro-check`; the command it installs is still `repro-check`. Until
-> then, use it from a checkout: `npm install && npm run build && node dist/bin.js issue.md`.
+> The command it installs is `repro-check`.
 >
 > Running the test suite from source needs Node **22.6 or newer** — it runs
 > Node's own test runner straight over the TypeScript with no build step, and
